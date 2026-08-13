@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <title>Page Not Found</title>
+    </head>
+
+    <body>
+        <h1>404 Not Found</h1>
+        <p>The page you are looking for does not exist.</p>
+        <a href="/">Go back to the homepage</a>
+        <br><br>
+        <p>or if you'd like, click this button and watch this number go up:</p>
+
+        <div class="hor-container" style="margin-top: 80px;">
+            <button id="incrementButton" onclick="buttonClick()">Click me!</button>
+            <p id="incrementNumber">0</p>
+        </div>
+
+        <div id="level-up-container" style="opacity: 0;">
+            <div id="level-up-text">Next Unlock: 50</div>
+            <div id="level-up-bar">
+                <div id="level-up-progress"></div>
+            </div>
+        </div>
+
+        <div id="shop-container" style="opacity: 0;">
+            <h2>Shop</h2>
+            <div class="hor-container">
+                <p id="inc-upg-desc">+1 to click amount</p>
+                <button id="inc-button" class="shop-button" onclick="buyIncrement()">Buy for 50</button>
+            </div>
+            <div class="hor-container">
+                <p id="mult-upg-desc">+0.5 to click multiplier</p>
+                <button id="mult-button" class="shop-button" onclick="buyMultiplier()">Buy for 250</button>
+            </div>
+            <h3 id="cpc-display">1.0 X 1.0 = 1 per click</h3>
+        </div>
+
+        <div id="rebirth-container" style="opacity: 0;">
+            <h2>Rebirths</h2>
+            <button id="rebirth-button" onclick="rebirth()">Rebirth for 2000</button>
+            <p>Rebirths reset your progress but give you a permanent x2 boost.</p>
+            <div id="rebirth-shop-container" style="opacity: 0;">
+                <p>Additionally, rebirths provide points to be spent at the rebirth shop for crazy boosts.</p>
+                <h2>Rebirth Shop</h2>
+                <h3 id="rebirth-points-display">Rebirth points: 0</h3>
+                <div class="hor-container">
+                    <p>+2 to click amount upgrade</p>
+                    <button id="rebirth-inc-button" class="shop-button" onclick="buyRebirthIncrement()">Buy for 1</button>
+                </div>
+                <div class="hor-container">
+                    <p>+0.5 to click multiplier upgrade</p>
+                    <button id="rebirth-mult-button" class="shop-button" onclick="buyRebirthMultiplier()">Buy for 2</button>
+                </div>
+                <div class="hor-container">
+                    <p>Unlock autoclicker (5 cps)</p>
+                    <button id="rebirth-autoclicker-button" class="shop-button" onclick="buyAutoclicker()">Buy for 1</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="win-msg-container" style="opacity: 0;">
+            <h1>YOU WIN!</h1>
+            <p>Congrats! You've reached 1,000,000 clicks!</p>
+            <p>Thanks for playing!</p>
+            <a href="/">Click here to return to the home page <b>as a champion!</b></a>
+        </div>
+    </body>
+
+
+
+    <script>
+        function getElementCenter(elem) {
+            let rect = elem.getBoundingClientRect();
+            return {
+                left: rect.left + rect.width / 2,
+                top: rect.top + rect.height / 2
+            };
+        }
+
+        let numElem = document.getElementById("incrementNumber");
+        
+        let num = 0;
+        let incrementAmount = 1;
+        let incrementMultiplier = 1;
+
+        let incAmntCost = 50;
+        let incMultCost = 250;
+
+        let incUpgAmount = 1;
+        let incUpgMultiplier = 0.5;
+
+        let rebirths = 0;
+        let rebirthCost = 2000;
+        let rebirthPoints = 0;
+        let rebirthMulti = 1;
+
+        let ownRebirthInc = false;
+        let ownRebirthMult = false;
+        let ownAutoclicker = false;
+
+        let floaters = [];
+        let floaterLifetimes = []; // parallel array in ms
+
+        let unlockGoal = 10;
+        let unlockNum = 0;
+        let unlockGoals = [10, 50, 1000, 20000, 1000000];
+
+        let cpcDisplay = document.getElementById("cpc-display");
+
+        function buttonClick() {
+            let totalIncrement = incrementAmount * incrementMultiplier * rebirthMulti;
+
+            num += totalIncrement;
+            numElem.innerText = num;
+
+            spawnFloater(totalIncrement);
+
+            if (num >= unlockGoal) {
+                unlockNum++;
+
+                processUnlocks();
+
+                if (unlockNum < unlockGoals.length) {
+                    unlockGoal = unlockGoals[unlockNum];
+                }
+
+                document.getElementById("level-up-text").innerText = "Next Unlock: " + unlockGoal;
+            } 
+            
+            updateProgressBar();
+        }
+
+
+        function updateProgressBar() {
+            let progress = (num / unlockGoal) * 100;
+            if (progress > 100) progress = 100; // Cap at 100%
+            document.getElementById("level-up-progress").style.width = progress + "%";
+        }
+
+        function processUnlocks() {
+            if (unlockNum === 1) {
+                // make progress bar visible
+                document.getElementById("level-up-container").style.opacity = 1;
+            } else if (unlockNum === 2) {
+                document.getElementById("shop-container").style.opacity = 1;
+            } else if (unlockNum === 3) {
+                document.getElementById("rebirth-container").style.opacity = 1;
+            } else if (unlockNum === 4) {
+                document.getElementById("rebirth-shop-container").style.opacity = 1;
+            } else if (unlockNum === 5) {
+                win();
+            }
+        }
+
+
+        function buyIncrement() {
+            if (num >= incAmntCost) {
+                num -= incAmntCost;
+                incrementAmount += incUpgAmount;
+                if (incAmntCost < 1000) {
+                    incAmntCost *= 2; // double the cost for next purchase
+                } else {
+                    incAmntCost *= 1.5; // increase by 50% for next purchase
+                }
+                incAmntCost = Math.round(incAmntCost); // round to nearest integer
+                document.getElementById("inc-button").innerText = "Buy for " + incAmntCost;
+                numElem.innerText = num;
+                updateCPCDisplay();
+            }
+        }
+
+        function buyMultiplier() {
+            if (num >= incMultCost) {
+                num -= incMultCost;
+                incrementMultiplier += incUpgMultiplier;
+                if (incMultCost < 1000) {
+                    incMultCost *= 2; // double the cost for next purchase
+                } else {
+                    incMultCost *= 1.5; // increase by 50% for next purchase
+                }
+                incMultCost = Math.round(incMultCost); // round to nearest integer
+                document.getElementById("mult-button").innerText = "Buy for " + incMultCost;
+                numElem.innerText = num;
+                updateCPCDisplay();
+            }
+        }
+
+        function updateCPCDisplay() {
+            let cpc = incrementAmount * incrementMultiplier * rebirthMulti;
+            if (rebirthMulti == 1) {
+                cpcDisplay.innerText = incrementAmount.toFixed(1) + " X " + incrementMultiplier.toFixed(1) + " = " + cpc.toFixed(1) + " per click";
+            } else {
+                cpcDisplay.innerText = incrementAmount.toFixed(1) + " X " + incrementMultiplier.toFixed(1) + " X " + rebirthMulti.toFixed(0) + " = " + cpc.toFixed(1) + " per click";
+            }
+        }
+
+
+        function rebirth() {
+            if (num >= rebirthCost) {
+                rebirths++;
+                rebirthPoints += 1;
+                rebirthMulti *= 2;
+
+                rebirthCost *= 4;
+                document.getElementById("rebirth-button").innerText = "Rebirth for " + rebirthCost;
+
+                num = 0;
+                incrementAmount = 1;
+                incrementMultiplier = 1;
+                incAmntCost = 50;
+                incMultCost = 250;
+
+                document.getElementById("inc-button").innerText = "Buy for " + incAmntCost;
+                document.getElementById("mult-button").innerText = "Buy for " + incMultCost;
+
+                document.getElementById("rebirth-points-display").innerText = "Rebirth points: " + rebirthPoints;
+                numElem.innerText = num;
+                updateCPCDisplay();
+                document.getElementById("rebirth-container").style.opacity = 1;
+            }
+        }
+
+
+        function buyRebirthIncrement() {
+            if (rebirthPoints >= 1 && !ownRebirthInc) {
+                rebirthPoints -= 1;
+                incUpgAmount = 3;
+                document.getElementById("inc-upg-desc").innerText = "+3 to click amount";
+                ownRebirthInc = true;
+                document.getElementById("rebirth-inc-button").innerText = "Purchased";
+                document.getElementById("rebirth-points-display").innerText = "Rebirth points: " + rebirthPoints;
+            }
+        }
+
+
+        function buyRebirthMultiplier() {
+            if (rebirthPoints >= 2 && !ownRebirthMult) {
+                rebirthPoints -= 2;
+                incUpgMultiplier = 1;
+                document.getElementById("mult-upg-desc").innerText = "+1 to click multiplier";
+                ownRebirthMult = true;
+                document.getElementById("rebirth-mult-button").innerText = "Purchased";
+                document.getElementById("rebirth-points-display").innerText = "Rebirth points: " + rebirthPoints;
+            }
+        }
+
+
+        function buyAutoclicker() {
+            if (rebirthPoints >= 1 && !ownAutoclicker) {
+                rebirthPoints -= 1;
+                ownAutoclicker = true;
+                document.getElementById("rebirth-autoclicker-button").innerText = "Purchased";
+                document.getElementById("rebirth-points-display").innerText = "Rebirth points: " + rebirthPoints;
+
+                // Start autoclicker
+                setInterval(buttonClick, 200); // 5 clicks per second
+            }
+        }
+
+
+
+        function spawnFloater(amount) {
+            let startPos = getElementCenter(numElem);
+
+            startPos.left += window.scrollX; // Adjust for scroll position
+            startPos.left -= 10; // center the floater horizontally
+
+            startPos.top += window.scrollY; // Adjust for scroll position
+            startPos.top -= 40; // start above the number
+
+            startPos.left += Math.random() * 10 - 5; // random horizontal offset
+            startPos.top += Math.random() * 10 - 5; // random vertical offset
+
+            let floater = document.createElement("div");
+            floater.innerText = "+" + amount;
+            floater.style.position = "absolute";
+            floater.className = "floater";
+            floater.style.left = startPos.left + "px";
+            floater.style.top = startPos.top + "px";
+            document.body.appendChild(floater);
+
+            floaters.push(floater);
+            floaterLifetimes.push(400); // lifetime in milliseconds
+        }
+
+        function updateFloaters() {
+            for (let i = floaters.length - 1; i >= 0; i--) {
+                let floater = floaters[i];
+                let lifetime = floaterLifetimes[i];
+
+                // Move the floater up
+                let currentTop = parseFloat(floater.style.top);
+                floater.style.top = (currentTop - 1) + "px";
+
+                // Decrease lifetime
+                lifetime -= 16; // assuming ~60fps, so ~16ms per frame
+                floaterLifetimes[i] = lifetime;
+
+                // If lifetime is over, remove the floater
+                if (lifetime <= 0) {
+                    document.body.removeChild(floater);
+                    floaters.splice(i, 1);
+                    floaterLifetimes.splice(i, 1);
+                }
+            }
+        }
+
+        setInterval(updateFloaters, 16); // Update floaters every ~16ms (~60fps)
+
+        function win() {
+            document.getElementById("level-up-container").style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById("win-msg-container").style.opacity = 1;
+                document.getElementById("incrementButton").id = "wincrement-button";
+            }, 500); // Wait for the fade-out transition to complete
+        }
+
+    </script>
+
+
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        p {
+            color: #666;
+        }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .hor-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+
+        #incrementButton {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 24px;
+            user-select: none;
+        }
+
+        #incrementButton:hover {
+            background-color: #0056b3;
+        }
+
+
+        #incrementNumber {
+            font-size: 40px;
+            color: black;
+            font-weight: bold;
+            margin: 0;
+            margin-left: 20px;
+        }
+
+
+        #level-up-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+            transition: opacity 0.5s ease-in-out;
+            user-select: none;
+        }
+
+        #level-up-text {
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #000;
+        }
+
+        #level-up-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #888;
+            border: 3px solid black;
+            overflow: hidden;
+        }
+
+        #level-up-progress {
+            height: 20px;
+            background-color: #ff0000;
+            overflow: hidden;
+            transition: width 0.05s linear;
+        }
+
+
+        #shop-container {
+            position: fixed;
+            top: 60%;
+            left: 20px;
+            transform: translateY(-50%);
+            height: 300px;
+            margin-top: auto;
+            margin-bottom: auto;
+            transition: opacity 0.5s ease-in-out;
+            user-select: none;
+        }
+
+
+        #rebirth-container {
+            position: fixed;
+            top: 60%;
+            right: 20px;
+            transform: translateY(-50%);
+            height: 500px;
+            margin-top: auto;
+            margin-bottom: auto;
+            transition: opacity 0.5s ease-in-out;
+            user-select: none;
+        }
+
+
+        #rebirth-shop-container {
+            transition: opacity 0.5s ease-in-out;
+        }
+
+
+        .floater {
+            font-size: 24px;
+            color: green;
+            font-weight: bold;
+            position: absolute;
+            pointer-events: none; /* So it doesn't block clicks */
+            transition: top 0.016s linear; /* Smooth movement */
+        }
+
+        #win-msg-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-left: auto;
+            margin-right: auto;
+            padding: 20px;
+            user-select: none;
+            text-align: center;
+            background-color: white;
+            border: 2px solid black;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #wincrement-button {
+            background: linear-gradient(
+                90deg,
+                #ff004c,
+                #ff8a00,
+                #ffd400,
+                #00c853,
+                #00b0ff,
+                #7c4dff,
+                #ff004c
+            );
+            background-size: 400% 400%;
+            animation: wincrement-rainbow-scroll 6s linear infinite;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 24px;
+            user-select: none;
+        }
+
+        @keyframes wincrement-rainbow-scroll {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+    </style>
+
+</html>
